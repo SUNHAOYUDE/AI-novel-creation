@@ -330,8 +330,8 @@ export function OutlinesPage() {
                 <p className="mt-2 text-sm text-mist/65">你可以先手工写一个总纲，再用 AI 补卷纲/章纲，或者完全手工维护。</p>
               </div>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        </div>
       </div>
     </div>
   );
