@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Book {
+  id             BigInt          @id @default(autoincrement())
+  name           String          @db.VarChar(255)
+  category       String          @db.VarChar(100)
+  subCategory    String?         @map("sub_category") @db.VarChar(100)
+  status         String          @default("draft") @db.VarChar(50)
+  description    String?         @db.Text
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  characters     Character[]
+  outlines       Outline[]
+  foreshadows    Foreshadow[]
+  chapters       Chapter[]
+  backstories    Backstory[]
+  worldMaps      WorldMap[]
+  timelineEvents TimelineEvent[]
+  economyEntries EconomyEntry[]
+
+  @@map("books")
+}
+
+model Character {
+  id                 BigInt   @id @default(autoincrement())
+  bookId             BigInt   @map("book_id")
+  name               String   @db.VarChar(255)
+  roleType           String   @map("role_type") @db.VarChar(100)
+  summary            String?  @db.Text
+  personalityProfile Json?    @map("personality_profile")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  book               Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@map("characters")
+}
+
+model Outline {
+  id        BigInt   @id @default(autoincrement())
+  bookId    BigInt   @map("book_id")
+  level     String   @db.VarChar(50)
+  title     String   @db.VarChar(255)
+  summary   String?  @db.Text
+  status    String   @default("draft") @db.VarChar(50)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  book      Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@map("outlines")
+}
+
+model Foreshadow {
+  id           BigInt   @id @default(autoincrement())
+  bookId       BigInt   @map("book_id")
+  title        String   @db.VarChar(255)
+  surfaceInfo  String?  @map("surface_info") @db.Text
+  realIntent   String?  @map("real_intent") @db.Text
+  targetPayoff String?  @map("target_payoff") @db.VarChar(255)
+  status       String   @default("planned") @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  book         Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@map("foreshadows")
+}
+
+model Chapter {
+  id        BigInt   @id @default(autoincrement())
+  bookId    BigInt   @map("book_id")
+  chapterNo Int      @map("chapter_no")
+  title     String   @db.VarChar(255)
+  content   String?  @db.LongText
+  status    String   @default("draft") @db.VarChar(50)
+  wordCount Int      @default(0) @map("word_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  book      Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@map("chapters")
+}
+
+model Backstory {
+  id        BigInt   @id @default(autoincrement())
+  bookId    BigInt   @map("book_id")
+  kind      String   @default("history") @db.VarChar(50)
+  source    String   @default("manual") @db.VarChar(50)
+  title     String   @db.VarChar(255)
+  content   String?  @db.LongText
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  book      Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@map("backstories")
+}
+
+model WorldMap {
+  id          BigInt   @id @default(autoincrement())
+  bookId      BigInt   @map("book_id")
+  parentId    BigInt?  @map("parent_id")
+  title       String   @db.VarChar(255)
+  mapType     String   @map("map_type") @db.VarChar(50)
+  description String?  @db.LongText
+  width       Int      @default(1000)
+  height      Int      @default(700)
+  sortOrder   Int      @default(0) @map("sort_order")
+  markersJson String?  @map("markers_json") @db.LongText
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  book        Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@index([parentId])
+  @@map("world_maps")
+}
+
+model TimelineEvent {
+  id           BigInt   @id @default(autoincrement())
+  bookId       BigInt   @map("book_id")
+  relatedMapId BigInt?  @map("related_map_id")
+  era          String?  @db.VarChar(100)
+  timeLabel    String   @map("time_label") @db.VarChar(100)
+  title        String   @db.VarChar(255)
+  description  String?  @db.LongText
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  book         Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@index([relatedMapId])
+  @@map("timeline_events")
+}
+
+model EconomyEntry {
+  id          BigInt   @id @default(autoincrement())
+  bookId      BigInt   @map("book_id")
+  category    String   @db.VarChar(50)
+  title       String   @db.VarChar(255)
+  region      String?  @db.VarChar(100)
+  circulation String?  @db.Text
+  coreValue   String?  @map("core_value") @db.VarChar(255)
+  description String?  @db.LongText
+  risk        String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  book        Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@index([category])
+  @@map("economy_entries")
+}
