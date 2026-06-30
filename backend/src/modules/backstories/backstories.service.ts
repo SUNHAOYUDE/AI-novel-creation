@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { DeepSeekProvider } from "../../providers/deepseek.provider.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
@@ -25,31 +25,41 @@ export class BackstoriesService {
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
-  findAll(bookId?: number): Promise<BackstoryDto[]> {
+  async findAll(userId: number, bookId?: number): Promise<BackstoryDto[]> {
+    this.requireUserId(userId);
+    if (bookId !== undefined) {
+      await this.ensureBookOwned(bookId, userId);
+    }
     return this.backstoriesRepository.findAll(bookId);
   }
 
-  async findOne(id: number): Promise<BackstoryDto> {
+  async findOne(userId: number, id: number): Promise<BackstoryDto> {
+    this.requireUserId(userId);
     const backstory = await this.backstoriesRepository.findOne(id);
 
     if (!backstory) {
       throw new NotFoundException(`Backstory ${id} not found`);
     }
 
+    await this.ensureBookOwned(backstory.bookId, userId);
     return backstory;
   }
 
-  async create(payload: CreateBackstoryDto): Promise<BackstoryDto> {
-    await this.ensureBookExists(payload.bookId);
+  async create(userId: number, payload: CreateBackstoryDto): Promise<BackstoryDto> {
+    this.requireUserId(userId);
+    await this.ensureBookOwned(payload.bookId, userId);
     const created = await this.backstoriesRepository.create(payload);
     await this.writeAudit(created.bookId, String(created.id), "create", `新增设定：${created.title}`, created);
     return created;
   }
 
-  async update(id: number, payload: UpdateBackstoryDto): Promise<BackstoryDto> {
-    if (payload.bookId) {
-      await this.ensureBookExists(payload.bookId);
+  async update(userId: number, id: number, payload: UpdateBackstoryDto): Promise<BackstoryDto> {
+    this.requireUserId(userId);
+    const existing = await this.backstoriesRepository.findOne(id);
+    if (!existing) {
+      throw new NotFoundException(`Backstory ${id} not found`);
     }
+    await this.ensureBookOwned(existing.bookId, userId);
 
     const backstory = await this.backstoriesRepository.update(id, payload);
 
@@ -61,8 +71,12 @@ export class BackstoriesService {
     return backstory;
   }
 
-  async remove(id: number): Promise<{ success: true }> {
+  async remove(userId: number, id: number): Promise<{ success: true }> {
+    this.requireUserId(userId);
     const existing = await this.backstoriesRepository.findOne(id);
+    if (existing) {
+      await this.ensureBookOwned(existing.bookId, userId);
+    }
     const removed = await this.backstoriesRepository.remove(id);
 
     if (!removed) {
@@ -75,7 +89,8 @@ export class BackstoriesService {
     return { success: true };
   }
 
-  async generate(payload: GenerateBackstoriesDto): Promise<BackstoryDto[]> {
+  async generate(userId: number, payload: GenerateBackstoriesDto): Promise<BackstoryDto[]> {
+    this.requireUserId(userId);
     if (!(await this.deepSeekProvider.isConfigured())) {
       throw new ServiceUnavailableException("DeepSeek API key is not configured.");
     }
@@ -84,7 +99,7 @@ export class BackstoriesService {
       throw new BadRequestException("Prompt is required.");
     }
 
-    const book = await this.ensureBookExists(payload.bookId);
+    const book = await this.ensureBookOwned(payload.bookId, userId);
     const currentItems = await this.backstoriesRepository.findAll(payload.bookId);
     const count = Math.min(Math.max(payload.count ?? 4, 1), 8);
 
@@ -133,10 +148,15 @@ export class BackstoriesService {
     return created;
   }
 
-  private async ensureBookExists(bookId: number) {
-    const book = await this.prismaService.book.findUnique({
+  private async ensureBookOwned(bookId: number, userId: number) {
+    if (!Number.isFinite(bookId) || bookId <= 0) {
+      throw new BadRequestException("bookId is invalid.");
+    }
+
+    const book = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(bookId)
+        id: BigInt(bookId),
+        ownerId: BigInt(userId)
       }
     });
 
@@ -145,6 +165,12 @@ export class BackstoriesService {
     }
 
     return book;
+  }
+
+  private requireUserId(userId: number) {
+    if (!Number.isFinite(userId) || userId <= 0) {
+      throw new UnauthorizedException("Unauthorized");
+    }
   }
 
   private parseGeneratedResult(content: string): GeneratedBackstoryResult {

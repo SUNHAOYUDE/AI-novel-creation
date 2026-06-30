@@ -9,6 +9,7 @@ datasource db {
 
 model Book {
   id             BigInt          @id @default(autoincrement())
+  ownerId        BigInt?         @map("owner_id")
   name           String          @db.VarChar(255)
   category       String          @db.VarChar(100)
   subCategory    String?         @map("sub_category") @db.VarChar(100)
@@ -16,6 +17,7 @@ model Book {
   description    String?         @db.Text
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
+  owner          User?           @relation(fields: [ownerId], references: [id])
   characters     Character[]
   outlines       Outline[]
   foreshadows    Foreshadow[]
@@ -25,7 +27,20 @@ model Book {
   timelineEvents TimelineEvent[]
   economyEntries EconomyEntry[]
 
+  @@index([ownerId])
   @@map("books")
+}
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         String   @default("user") @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  books        Book[]
+
+  @@map("users")
 }
 
 model Character {

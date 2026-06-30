@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { RequireAuth } from "@/features/auth/RequireAuth";
 import { AppLayout } from "@/layouts/AppLayout";
 import { BookWorkspaceLayout } from "@/layouts/BookWorkspaceLayout";
 import { BookWorkspaceOverviewPage } from "@/pages/BookWorkspaceOverviewPage";
@@ -9,15 +10,23 @@ import { CharactersPage } from "@/pages/CharactersPage";
 import { EconomyPage } from "@/pages/EconomyPage";
 import { ForeshadowsPage } from "@/pages/ForeshadowsPage";
 import { HomePage } from "@/pages/HomePage";
+import { LoginPage } from "@/pages/LoginPage";
 import { OutlinesPage } from "@/pages/OutlinesPage";
+import { RegisterPage } from "@/pages/RegisterPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { WorldMapsPage } from "@/pages/WorldMapsPage";
 
 export const router = createBrowserRouter([
+  { path: "/login", element: <LoginPage /> },
+  { path: "/register", element: <RegisterPage /> },
   {
     path: "/",
-    element: <AppLayout />,
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <HomePage /> },
       { path: "books", element: <BooksPage /> },

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { DeepSeekProvider } from "../../providers/deepseek.provider.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
@@ -17,27 +17,41 @@ export class ChaptersService {
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
-  findAll(bookId?: number): Promise<ChapterDto[]> {
+  async findAll(userId: number, bookId?: number): Promise<ChapterDto[]> {
+    this.requireUserId(userId);
+    if (bookId !== undefined) {
+      await this.ensureBookOwned(bookId, userId);
+    }
     return this.chaptersRepository.findAll(bookId);
   }
 
-  async findOne(id: number): Promise<ChapterDto> {
+  async findOne(userId: number, id: number): Promise<ChapterDto> {
+    this.requireUserId(userId);
     const chapter = await this.chaptersRepository.findOne(id);
 
     if (!chapter) {
       throw new NotFoundException(`Chapter ${id} not found`);
     }
 
+    await this.ensureBookOwned(chapter.bookId, userId);
     return chapter;
   }
 
-  async create(payload: CreateChapterDto): Promise<ChapterDto> {
+  async create(userId: number, payload: CreateChapterDto): Promise<ChapterDto> {
+    this.requireUserId(userId);
+    await this.ensureBookOwned(payload.bookId, userId);
     const created = await this.chaptersRepository.create(payload);
     await this.writeAudit(created.bookId, String(created.id), "create", `新增章节：${created.title}`, created);
     return created;
   }
 
-  async update(id: number, payload: UpdateChapterDto): Promise<ChapterDto> {
+  async update(userId: number, id: number, payload: UpdateChapterDto): Promise<ChapterDto> {
+    this.requireUserId(userId);
+    const existing = await this.chaptersRepository.findOne(id);
+    if (!existing) {
+      throw new NotFoundException(`Chapter ${id} not found`);
+    }
+    await this.ensureBookOwned(existing.bookId, userId);
     const chapter = await this.chaptersRepository.update(id, payload);
 
     if (!chapter) {
@@ -48,8 +62,12 @@ export class ChaptersService {
     return chapter;
   }
 
-  async remove(id: number): Promise<{ success: true }> {
+  async remove(userId: number, id: number): Promise<{ success: true }> {
+    this.requireUserId(userId);
     const existing = await this.chaptersRepository.findOne(id);
+    if (existing) {
+      await this.ensureBookOwned(existing.bookId, userId);
+    }
     const removed = await this.chaptersRepository.remove(id);
 
     if (!removed) {
@@ -62,7 +80,8 @@ export class ChaptersService {
     return { success: true };
   }
 
-  async generateAi(payload: GenerateChapterAiDto) {
+  async generateAi(userId: number, payload: GenerateChapterAiDto) {
+    this.requireUserId(userId);
     if (!(await this.deepSeekProvider.isConfigured())) {
       throw new ServiceUnavailableException("DeepSeek API key is not configured.");
     }
@@ -76,11 +95,7 @@ export class ChaptersService {
       throw new BadRequestException("Instruction is required for rewrite mode.");
     }
 
-    const book = await this.prismaService.book.findUnique({
-      where: {
-        id: BigInt(payload.bookId)
-      }
-    });
+    const book = await this.ensureBookOwned(payload.bookId, userId);
 
     if (!book) {
       throw new NotFoundException(`Book ${payload.bookId} not found`);
@@ -147,6 +162,31 @@ export class ChaptersService {
     );
 
     return { text };
+  }
+
+  private async ensureBookOwned(bookId: number, userId: number) {
+    if (!Number.isFinite(bookId) || bookId <= 0) {
+      throw new BadRequestException("bookId is invalid.");
+    }
+
+    const book = await this.prismaService.book.findFirst({
+      where: {
+        id: BigInt(bookId),
+        ownerId: BigInt(userId)
+      }
+    });
+
+    if (!book) {
+      throw new NotFoundException(`Book ${bookId} not found`);
+    }
+
+    return book;
+  }
+
+  private requireUserId(userId: number) {
+    if (!Number.isFinite(userId) || userId <= 0) {
+      throw new UnauthorizedException("Unauthorized");
+    }
   }
 
   private async writeAudit(bookId: number, entityId: string, action: string, summary: string, payload: unknown) {

@@ -58,6 +58,17 @@ export type ApiResponse<T> = {
   data: T;
 };
 
+export type AuthUser = {
+  id: number;
+  email: string;
+  role: string;
+};
+
+export type AuthResult = {
+  user: AuthUser;
+  token: string;
+};
+
 export type AuditLog = {
   id: number;
   bookId: number | null;

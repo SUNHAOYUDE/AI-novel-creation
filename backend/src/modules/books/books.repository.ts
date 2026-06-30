@@ -8,8 +8,11 @@ import type { UpdateBookDto } from "./dto/update-book.dto.js";
 export class BooksRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll(): Promise<BookDto[]> {
+  async findAll(ownerId: number): Promise<BookDto[]> {
     const books = await this.prismaService.book.findMany({
+      where: {
+        ownerId: BigInt(ownerId)
+      },
       orderBy: {
         updatedAt: "desc"
       }
@@ -18,19 +21,21 @@ export class BooksRepository {
     return books.map((book) => this.toDto(book));
   }
 
-  async findOne(id: number): Promise<BookDto | undefined> {
-    const book = await this.prismaService.book.findUnique({
+  async findOne(id: number, ownerId: number): Promise<BookDto | undefined> {
+    const book = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(id)
+        id: BigInt(id),
+        ownerId: BigInt(ownerId)
       }
     });
 
     return book ? this.toDto(book) : undefined;
   }
 
-  async create(payload: CreateBookDto): Promise<BookDto> {
+  async create(payload: CreateBookDto, ownerId: number): Promise<BookDto> {
     const book = await this.prismaService.book.create({
       data: {
+        ownerId: BigInt(ownerId),
         name: payload.name,
         category: payload.category,
         subCategory: payload.subCategory ?? "",
@@ -42,10 +47,11 @@ export class BooksRepository {
     return this.toDto(book);
   }
 
-  async update(id: number, payload: UpdateBookDto): Promise<BookDto | undefined> {
-    const existing = await this.prismaService.book.findUnique({
+  async update(id: number, payload: UpdateBookDto, ownerId: number): Promise<BookDto | undefined> {
+    const existing = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(id)
+        id: BigInt(id),
+        ownerId: BigInt(ownerId)
       }
     });
 
@@ -69,10 +75,11 @@ export class BooksRepository {
     return this.toDto(book);
   }
 
-  async remove(id: number): Promise<boolean> {
-    const existing = await this.prismaService.book.findUnique({
+  async remove(id: number, ownerId: number): Promise<boolean> {
+    const existing = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(id)
+        id: BigInt(id),
+        ownerId: BigInt(ownerId)
       }
     });
 

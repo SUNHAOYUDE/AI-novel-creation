@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { DeepSeekProvider } from "../../providers/deepseek.provider.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
@@ -32,27 +32,41 @@ export class OutlinesService {
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
-  findAll(bookId?: number): Promise<OutlineDto[]> {
+  async findAll(userId: number, bookId?: number): Promise<OutlineDto[]> {
+    this.requireUserId(userId);
+    if (bookId !== undefined) {
+      await this.ensureBookOwned(bookId, userId);
+    }
     return this.outlinesRepository.findAll(bookId);
   }
 
-  async findOne(id: number): Promise<OutlineDto> {
+  async findOne(userId: number, id: number): Promise<OutlineDto> {
+    this.requireUserId(userId);
     const outline = await this.outlinesRepository.findOne(id);
 
     if (!outline) {
       throw new NotFoundException(`Outline ${id} not found`);
     }
 
+    await this.ensureBookOwned(outline.bookId, userId);
     return outline;
   }
 
-  async create(payload: CreateOutlineDto): Promise<OutlineDto> {
+  async create(userId: number, payload: CreateOutlineDto): Promise<OutlineDto> {
+    this.requireUserId(userId);
+    await this.ensureBookOwned(payload.bookId, userId);
     const created = await this.outlinesRepository.create(payload);
     await this.writeAudit(created.bookId, String(created.id), "create", `新增大纲：${created.title}`, created);
     return created;
   }
 
-  async update(id: number, payload: UpdateOutlineDto): Promise<OutlineDto> {
+  async update(userId: number, id: number, payload: UpdateOutlineDto): Promise<OutlineDto> {
+    this.requireUserId(userId);
+    const existing = await this.outlinesRepository.findOne(id);
+    if (!existing) {
+      throw new NotFoundException(`Outline ${id} not found`);
+    }
+    await this.ensureBookOwned(existing.bookId, userId);
     const outline = await this.outlinesRepository.update(id, payload);
 
     if (!outline) {
@@ -63,8 +77,12 @@ export class OutlinesService {
     return outline;
   }
 
-  async remove(id: number): Promise<{ success: true }> {
+  async remove(userId: number, id: number): Promise<{ success: true }> {
+    this.requireUserId(userId);
     const existing = await this.outlinesRepository.findOne(id);
+    if (existing) {
+      await this.ensureBookOwned(existing.bookId, userId);
+    }
     const removed = await this.outlinesRepository.remove(id);
 
     if (!removed) {
@@ -77,7 +95,8 @@ export class OutlinesService {
     return { success: true };
   }
 
-  async generate(payload: GenerateOutlineDto): Promise<OutlineDto[]> {
+  async generate(userId: number, payload: GenerateOutlineDto): Promise<OutlineDto[]> {
+    this.requireUserId(userId);
     if (!(await this.deepSeekProvider.isConfigured())) {
       throw new ServiceUnavailableException("DeepSeek API key is not configured.");
     }
@@ -86,9 +105,10 @@ export class OutlinesService {
       throw new BadRequestException("Premise is required.");
     }
 
-    const book = await this.prismaService.book.findUnique({
+    const book = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(payload.bookId)
+        id: BigInt(payload.bookId),
+        ownerId: BigInt(userId)
       }
     });
 
@@ -191,5 +211,28 @@ export class OutlinesService {
       summary,
       payloadJson: JSON.stringify(payload)
     });
+  }
+
+  private async ensureBookOwned(bookId: number, userId: number) {
+    if (!Number.isFinite(bookId) || bookId <= 0) {
+      throw new BadRequestException("bookId is invalid.");
+    }
+
+    const book = await this.prismaService.book.findFirst({
+      where: {
+        id: BigInt(bookId),
+        ownerId: BigInt(userId)
+      }
+    });
+
+    if (!book) {
+      throw new NotFoundException(`Book ${bookId} not found`);
+    }
+  }
+
+  private requireUserId(userId: number) {
+    if (!Number.isFinite(userId) || userId <= 0) {
+      throw new UnauthorizedException("Unauthorized");
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
 import type { CreateBookDto } from "./dto/create-book.dto.js";
@@ -14,12 +14,14 @@ export class BooksService {
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
-  findAll(): Promise<BookDto[]> {
-    return this.booksRepository.findAll();
+  findAll(userId: number): Promise<BookDto[]> {
+    this.requireUserId(userId);
+    return this.booksRepository.findAll(userId);
   }
 
-  async findOne(id: number): Promise<BookDto> {
-    const book = await this.booksRepository.findOne(id);
+  async findOne(id: number, userId: number): Promise<BookDto> {
+    this.requireUserId(userId);
+    const book = await this.booksRepository.findOne(id, userId);
 
     if (!book) {
       throw new NotFoundException(`Book ${id} not found`);
@@ -28,14 +30,16 @@ export class BooksService {
     return book;
   }
 
-  async create(payload: CreateBookDto): Promise<BookDto> {
-    const created = await this.booksRepository.create(payload);
+  async create(payload: CreateBookDto, userId: number): Promise<BookDto> {
+    this.requireUserId(userId);
+    const created = await this.booksRepository.create(payload, userId);
     await this.writeAudit(String(created.id), "create", `新增作品：${created.name}`, created);
     return created;
   }
 
-  async update(id: number, payload: UpdateBookDto): Promise<BookDto> {
-    const book = await this.booksRepository.update(id, payload);
+  async update(id: number, payload: UpdateBookDto, userId: number): Promise<BookDto> {
+    this.requireUserId(userId);
+    const book = await this.booksRepository.update(id, payload, userId);
 
     if (!book) {
       throw new NotFoundException(`Book ${id} not found`);
@@ -45,9 +49,10 @@ export class BooksService {
     return book;
   }
 
-  async remove(id: number): Promise<{ success: true }> {
-    const existing = await this.booksRepository.findOne(id);
-    const removed = await this.booksRepository.remove(id);
+  async remove(id: number, userId: number): Promise<{ success: true }> {
+    this.requireUserId(userId);
+    const existing = await this.booksRepository.findOne(id, userId);
+    const removed = await this.booksRepository.remove(id, userId);
 
     if (!removed) {
       throw new NotFoundException(`Book ${id} not found`);
@@ -59,8 +64,9 @@ export class BooksService {
     return { success: true };
   }
 
-  async getWorkbench() {
-    const books = await this.booksRepository.findAll();
+  async getWorkbench(userId: number) {
+    this.requireUserId(userId);
+    const books = await this.booksRepository.findAll(userId);
 
     const results = await Promise.all(
       books.map(async (book) => {
@@ -122,6 +128,12 @@ export class BooksService {
     );
 
     return results;
+  }
+
+  private requireUserId(userId: number) {
+    if (!Number.isFinite(userId) || userId <= 0) {
+      throw new UnauthorizedException("Unauthorized");
+    }
   }
 
   private async writeAudit(entityId: string, action: string, summary: string, payload: unknown) {

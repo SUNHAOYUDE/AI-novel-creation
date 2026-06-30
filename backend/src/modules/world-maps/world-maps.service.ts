@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
 import type { CreateWorldMapDto } from "./dto/create-world-map.dto.js";
@@ -14,31 +14,41 @@ export class WorldMapsService {
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
-  findAll(bookId?: number): Promise<WorldMapDto[]> {
+  async findAll(userId: number, bookId?: number): Promise<WorldMapDto[]> {
+    this.requireUserId(userId);
+    if (bookId !== undefined) {
+      await this.ensureBookOwned(bookId, userId);
+    }
     return this.worldMapsRepository.findAll(bookId);
   }
 
-  async findOne(id: number): Promise<WorldMapDto> {
+  async findOne(userId: number, id: number): Promise<WorldMapDto> {
+    this.requireUserId(userId);
     const map = await this.worldMapsRepository.findOne(id);
 
     if (!map) {
       throw new NotFoundException(`World map ${id} not found`);
     }
 
+    await this.ensureBookOwned(map.bookId, userId);
     return map;
   }
 
-  async create(payload: CreateWorldMapDto): Promise<WorldMapDto> {
-    await this.ensureBookExists(payload.bookId);
+  async create(userId: number, payload: CreateWorldMapDto): Promise<WorldMapDto> {
+    this.requireUserId(userId);
+    await this.ensureBookOwned(payload.bookId, userId);
     const created = await this.worldMapsRepository.create(payload);
     await this.writeAudit(created.bookId, String(created.id), "create", `新增地图：${created.title}`, created);
     return created;
   }
 
-  async update(id: number, payload: UpdateWorldMapDto): Promise<WorldMapDto> {
-    if (payload.bookId) {
-      await this.ensureBookExists(payload.bookId);
+  async update(userId: number, id: number, payload: UpdateWorldMapDto): Promise<WorldMapDto> {
+    this.requireUserId(userId);
+    const existing = await this.worldMapsRepository.findOne(id);
+    if (!existing) {
+      throw new NotFoundException(`World map ${id} not found`);
     }
+    await this.ensureBookOwned(existing.bookId, userId);
 
     const map = await this.worldMapsRepository.update(id, payload);
 
@@ -50,8 +60,12 @@ export class WorldMapsService {
     return map;
   }
 
-  async remove(id: number): Promise<{ success: true }> {
+  async remove(userId: number, id: number): Promise<{ success: true }> {
+    this.requireUserId(userId);
     const existing = await this.worldMapsRepository.findOne(id);
+    if (existing) {
+      await this.ensureBookOwned(existing.bookId, userId);
+    }
     const removed = await this.worldMapsRepository.remove(id);
 
     if (!removed) {
@@ -64,14 +78,15 @@ export class WorldMapsService {
     return { success: true };
   }
 
-  private async ensureBookExists(bookId: number) {
+  private async ensureBookOwned(bookId: number, userId: number) {
     if (!Number.isFinite(bookId) || bookId <= 0) {
       throw new BadRequestException("bookId is invalid.");
     }
 
-    const book = await this.prismaService.book.findUnique({
+    const book = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(bookId)
+        id: BigInt(bookId),
+        ownerId: BigInt(userId)
       }
     });
 
@@ -80,6 +95,12 @@ export class WorldMapsService {
     }
 
     return book;
+  }
+
+  private requireUserId(userId: number) {
+    if (!Number.isFinite(userId) || userId <= 0) {
+      throw new UnauthorizedException("Unauthorized");
+    }
   }
 
   private async writeAudit(bookId: number, entityId: string, action: string, summary: string, payload: unknown) {

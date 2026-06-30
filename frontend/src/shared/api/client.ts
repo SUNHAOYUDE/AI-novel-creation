@@ -1,10 +1,22 @@
 import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL?.trim();
+const AUTH_TOKEN_KEY = "auth_token";
 
 export const apiClient = axios.create({
   baseURL: baseURL && baseURL.length > 0 ? baseURL : (import.meta.env.DEV ? "http://localhost:3000/api" : "/api"),
   timeout: 10000
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (token) {
+    config.headers = {
+      ...(config.headers ?? {}),
+      Authorization: `Bearer ${token}`
+    };
+  }
+  return config;
 });
 
 apiClient.interceptors.response.use(

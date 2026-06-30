@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
 import type { CreateTimelineEventDto } from "./dto/create-timeline-event.dto.js";
@@ -14,31 +14,41 @@ export class TimelineEventsService {
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
-  findAll(bookId?: number): Promise<TimelineEventDto[]> {
+  async findAll(userId: number, bookId?: number): Promise<TimelineEventDto[]> {
+    this.requireUserId(userId);
+    if (bookId !== undefined) {
+      await this.ensureBookOwned(bookId, userId);
+    }
     return this.timelineEventsRepository.findAll(bookId);
   }
 
-  async findOne(id: number): Promise<TimelineEventDto> {
+  async findOne(userId: number, id: number): Promise<TimelineEventDto> {
+    this.requireUserId(userId);
     const event = await this.timelineEventsRepository.findOne(id);
 
     if (!event) {
       throw new NotFoundException(`Timeline event ${id} not found`);
     }
 
+    await this.ensureBookOwned(event.bookId, userId);
     return event;
   }
 
-  async create(payload: CreateTimelineEventDto): Promise<TimelineEventDto> {
-    await this.ensureBookExists(payload.bookId);
+  async create(userId: number, payload: CreateTimelineEventDto): Promise<TimelineEventDto> {
+    this.requireUserId(userId);
+    await this.ensureBookOwned(payload.bookId, userId);
     const created = await this.timelineEventsRepository.create(payload);
     await this.writeAudit(created.bookId, String(created.id), "create", `新增时间线事件：${created.title}`, created);
     return created;
   }
 
-  async update(id: number, payload: UpdateTimelineEventDto): Promise<TimelineEventDto> {
-    if (payload.bookId) {
-      await this.ensureBookExists(payload.bookId);
+  async update(userId: number, id: number, payload: UpdateTimelineEventDto): Promise<TimelineEventDto> {
+    this.requireUserId(userId);
+    const existing = await this.timelineEventsRepository.findOne(id);
+    if (!existing) {
+      throw new NotFoundException(`Timeline event ${id} not found`);
     }
+    await this.ensureBookOwned(existing.bookId, userId);
 
     const event = await this.timelineEventsRepository.update(id, payload);
 
@@ -50,8 +60,12 @@ export class TimelineEventsService {
     return event;
   }
 
-  async remove(id: number): Promise<{ success: true }> {
+  async remove(userId: number, id: number): Promise<{ success: true }> {
+    this.requireUserId(userId);
     const existing = await this.timelineEventsRepository.findOne(id);
+    if (existing) {
+      await this.ensureBookOwned(existing.bookId, userId);
+    }
     const removed = await this.timelineEventsRepository.remove(id);
 
     if (!removed) {
@@ -64,14 +78,15 @@ export class TimelineEventsService {
     return { success: true };
   }
 
-  private async ensureBookExists(bookId: number) {
+  private async ensureBookOwned(bookId: number, userId: number) {
     if (!Number.isFinite(bookId) || bookId <= 0) {
       throw new BadRequestException("bookId is invalid.");
     }
 
-    const book = await this.prismaService.book.findUnique({
+    const book = await this.prismaService.book.findFirst({
       where: {
-        id: BigInt(bookId)
+        id: BigInt(bookId),
+        ownerId: BigInt(userId)
       }
     });
 
@@ -80,6 +95,12 @@ export class TimelineEventsService {
     }
 
     return book;
+  }
+
+  private requireUserId(userId: number) {
+    if (!Number.isFinite(userId) || userId <= 0) {
+      throw new UnauthorizedException("Unauthorized");
+    }
   }
 
   private async writeAudit(bookId: number, entityId: string, action: string, summary: string, payload: unknown) {
