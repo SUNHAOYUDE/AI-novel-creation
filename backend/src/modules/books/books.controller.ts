@@ -18,7 +18,7 @@ export class BooksController {
     return ok(await this.booksService.findAll());
   }
 
-  @Get(":id")
+  @Get(":id(\\d+)")
   async findOne(@Param("id", ParseIntPipe) id: number) {
     return ok(await this.booksService.findOne(id));
   }
