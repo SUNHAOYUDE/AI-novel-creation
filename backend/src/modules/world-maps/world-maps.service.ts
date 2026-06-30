@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
 import type { CreateWorldMapDto } from "./dto/create-world-map.dto.js";
@@ -65,6 +65,10 @@ export class WorldMapsService {
   }
 
   private async ensureBookExists(bookId: number) {
+    if (!Number.isFinite(bookId) || bookId <= 0) {
+      throw new BadRequestException("bookId is invalid.");
+    }
+
     const book = await this.prismaService.book.findUnique({
       where: {
         id: BigInt(bookId)

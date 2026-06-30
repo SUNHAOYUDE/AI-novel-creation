@@ -141,7 +141,7 @@ export class TimelineEventsRepository {
         WHERE id = ?
       `,
       payload.bookId ?? existing.bookId,
-      payload.relatedMapId ?? existing.relatedMapId,
+      payload.relatedMapId !== undefined ? payload.relatedMapId : existing.relatedMapId,
       payload.era ?? existing.era,
       payload.timeLabel ?? existing.timeLabel,
       payload.title ?? existing.title,
@@ -218,6 +218,15 @@ export class TimelineEventsRepository {
   }
 
   private toIsoString(value: Date | string): string {
-    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().toISOString();
+    }
+
+    return parsed.toISOString();
   }
 }

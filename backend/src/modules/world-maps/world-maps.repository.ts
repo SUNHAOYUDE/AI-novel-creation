@@ -105,7 +105,7 @@ export class WorldMapsRepository {
             sort_order,
             markers_json
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         payload.bookId,
         payload.parentId ?? null,
@@ -153,7 +153,7 @@ export class WorldMapsRepository {
         WHERE id = ?
       `,
       payload.bookId ?? existing.bookId,
-      payload.parentId ?? existing.parentId,
+      payload.parentId !== undefined ? payload.parentId : existing.parentId,
       payload.title ?? existing.title,
       payload.mapType ?? existing.mapType,
       payload.description ?? existing.description,
@@ -246,6 +246,15 @@ export class WorldMapsRepository {
   }
 
   private toIsoString(value: Date | string): string {
-    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().toISOString();
+    }
+
+    return parsed.toISOString();
   }
 }

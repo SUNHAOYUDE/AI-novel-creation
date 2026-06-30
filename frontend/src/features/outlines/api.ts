@@ -1,5 +1,5 @@
 import { apiClient } from "@/shared/api/client";
-import type { ApiResponse, GenerateOutlinePayload, Outline } from "@/shared/types";
+import type { ApiResponse, GenerateOutlinePayload, Outline, OutlinePayload } from "@/shared/types";
 
 function ensureOutlinesArray(data: Outline[]) {
   if (!Array.isArray(data)) {
@@ -22,4 +22,19 @@ export async function generateOutlines(payload: GenerateOutlinePayload) {
     timeout: 30000
   });
   return ensureOutlinesArray(response.data.data);
+}
+
+export async function createOutline(payload: OutlinePayload) {
+  const response = await apiClient.post<ApiResponse<Outline>>("/outlines", payload);
+  return response.data.data;
+}
+
+export async function updateOutline(id: number, payload: OutlinePayload) {
+  const response = await apiClient.patch<ApiResponse<Outline>>(`/outlines/${id}`, payload);
+  return response.data.data;
+}
+
+export async function deleteOutline(id: number) {
+  const response = await apiClient.delete<ApiResponse<{ success: true }>>(`/outlines/${id}`);
+  return response.data.data;
 }

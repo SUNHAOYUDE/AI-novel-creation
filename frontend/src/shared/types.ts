@@ -111,6 +111,15 @@ export type GenerateOutlinePayload = {
   requirements: string;
 };
 
+export type OutlinePayload = {
+  bookId: number;
+  level: "global" | "volume" | "chapter";
+  title: string;
+  summary: string;
+  status: string;
+  sortOrder: number;
+};
+
 export type Character = {
   id: number;
   bookId: number;
