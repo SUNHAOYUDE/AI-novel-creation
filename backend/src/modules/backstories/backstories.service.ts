@@ -123,8 +123,8 @@ export class BackstoriesService {
         bookId: payload.bookId,
         kind: this.normalizeKind(item.kind),
         source: "ai",
-        title: item.title.trim(),
-        content: item.content.trim(),
+        title: this.normalizeSingleLine(item.title),
+        content: this.normalizeParagraph(item.content),
         sortOrder: nextSortOrder + index
       }))
     );
@@ -152,7 +152,9 @@ export class BackstoriesService {
     const fencedMatch = normalized.match(/```json\s*([\s\S]*?)```/i);
     const candidate = fencedMatch?.[1] ?? normalized;
     const objectMatch = candidate.match(/\{[\s\S]*\}/);
-    const jsonText = objectMatch?.[0] ?? candidate;
+    const jsonText = (objectMatch?.[0] ?? candidate)
+      .replace(/,\s*([}\]])/g, "$1")
+      .replace(/\uFEFF/g, "");
 
     try {
       const parsed = JSON.parse(jsonText) as GeneratedBackstoryResult;
@@ -173,6 +175,20 @@ export class BackstoriesService {
     const normalized = kind.trim().toLowerCase();
     const supportedKinds = new Set(["history", "rule", "culture", "faction", "secret"]);
     return supportedKinds.has(normalized) ? normalized : "history";
+  }
+
+  private normalizeParagraph(value: string) {
+    return value
+      .replace(/\r\n/g, "\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  private normalizeSingleLine(value: string) {
+    return value
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private async writeAudit(bookId: number, entityId: string, action: string, summary: string, payload: unknown) {

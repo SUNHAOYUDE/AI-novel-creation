@@ -49,6 +49,14 @@ const promptTemplates = [
   }
 ];
 
+function normalizeBackstoryText(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function BackstoriesPage() {
   const params = useParams();
   const routeBookId = params.bookId ? Number(params.bookId) : null;
@@ -220,7 +228,7 @@ export function BackstoriesPage() {
         const body = items.map((item) => [
           `### ${item.sortOrder}. ${item.title}`,
           "",
-          item.content || "暂无内容",
+          item.content ? normalizeBackstoryText(item.content) : "暂无内容",
           ""
         ].join("\n")).join("\n");
 
@@ -277,12 +285,19 @@ export function BackstoriesPage() {
       return;
     }
 
+    if (!generateState.prompt.trim()) {
+      setErrorMessage("请先填写生成提示词，再开始 AI 生成。");
+      return;
+    }
+
     setIsGenerating(true);
     setErrorMessage("");
 
     try {
       const generated = await generateBackstories({
         ...generateState,
+        prompt: generateState.prompt.trim(),
+        focus: generateState.focus?.trim(),
         bookId: selectedBookId
       });
       setBackstories((current) => [...current, ...generated].sort((a, b) => a.sortOrder - b.sortOrder));
@@ -455,7 +470,9 @@ export function BackstoriesPage() {
                                 </span>
                               </div>
                               <h4 className="mt-3 text-lg font-medium text-white">{item.title}</h4>
-                              <p className="mt-3 text-sm leading-7 text-mist/65 whitespace-pre-wrap">{item.content || "暂无设定内容"}</p>
+                              <p className="mt-3 text-sm leading-6 text-mist/65 whitespace-pre-line">
+                                {item.content ? normalizeBackstoryText(item.content) : "暂无设定内容"}
+                              </p>
                             </div>
                             <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-mist/65">
                               {item.bookName}
@@ -494,7 +511,7 @@ export function BackstoriesPage() {
           )}
         </SectionCard>
 
-        <div className="grid gap-6">
+        <div className="grid gap-6 self-start xl:sticky xl:top-6">
           <SectionCard title="AI 设定生成台" description="输入提示词后，AI 会同时生成背景故事与规则，并直接落到当前作品下。">
             <div className="grid gap-4">
               <div className="grid gap-3 md:grid-cols-3">
