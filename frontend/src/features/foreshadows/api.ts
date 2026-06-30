@@ -9,9 +9,9 @@ function ensureForeshadowsArray(data: Foreshadow[]) {
   return data;
 }
 
-export async function getForeshadows(bookId?: number) {
+export async function getForeshadows(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<Foreshadow[]>>("/foreshadows", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureForeshadowsArray(response.data.data);

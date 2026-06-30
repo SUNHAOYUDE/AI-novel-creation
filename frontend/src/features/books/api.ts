@@ -12,7 +12,11 @@ export async function getBooks() {
   return books;
 }
 
-export async function getBook(id: number) {
+export async function getBook(id: number | null) {
+  if (id === null) {
+    throw new Error("缺少作品 ID");
+  }
+
   const response = await apiClient.get<ApiResponse<Book>>(`/books/${id}`);
   return response.data.data;
 }

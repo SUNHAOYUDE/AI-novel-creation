@@ -27,9 +27,9 @@ export const books: Book[] = [
 ];
 
 export const outlines: Outline[] = [
-  { id: 1, level: "global", title: "总纲", summary: "围绕失踪案与城市记忆异常展开。", status: "已生成" },
-  { id: 2, level: "volume", title: "第一卷", summary: "建立世界观并完成第一轮悬念投放。", status: "待细化" },
-  { id: 3, level: "chapter", title: "第 1 章", summary: "通过一场失控追逐引入主角与主冲突。", status: "待检查" }
+  { id: 1, bookId: 1, level: "global", title: "总纲", summary: "围绕失踪案与城市记忆异常展开。", status: "已生成", sortOrder: 1 },
+  { id: 2, bookId: 1, level: "volume", title: "第一卷", summary: "建立世界观并完成第一轮悬念投放。", status: "待细化", sortOrder: 2 },
+  { id: 3, bookId: 1, level: "chapter", title: "第 1 章", summary: "通过一场失控追逐引入主角与主冲突。", status: "待检查", sortOrder: 3 }
 ];
 
 export const characters: Character[] = [
@@ -42,7 +42,22 @@ export const characters: Character[] = [
     summary: "理性强、控制欲强、隐藏创伤明显，适合承担推动剧情的主视角。",
     createdAt: "2026-06-29T10:00:00.000Z",
     updatedAt: "2026-06-29T10:00:00.000Z",
-    tags: ["理性 72", "野心 81", "控制欲 84"]
+    tags: ["理性 72", "野心 81", "控制欲 84"],
+    profile: {
+      gender: "男",
+      age: "27",
+      occupation: "前调查记者",
+      faction: "无所属",
+      appearance: "黑发，常穿深色风衣，眼神总像在审视细节。",
+      personality: "理性、克制、戒备心强。",
+      motivation: "查清失踪案真相和自己被篡改的记忆。",
+      goal: "找到旧案核心证据。",
+      fear: "再次失去关键记忆。",
+      strength: "逻辑强、执行力高、观察敏锐。",
+      weakness: "不信任他人，容易独断。",
+      secret: "他曾主动参与过一次记忆封存。",
+      arc: "从冷硬独行走向愿意信任同伴。"
+    }
   },
   {
     id: 2,
@@ -53,7 +68,22 @@ export const characters: Character[] = [
     summary: "外冷内热，长期压抑情绪，后续适合作为价值观冲突载体。",
     createdAt: "2026-06-29T10:00:00.000Z",
     updatedAt: "2026-06-29T10:00:00.000Z",
-    tags: ["共情 66", "信任阈值高", "反差感强"]
+    tags: ["共情 66", "信任阈值高", "反差感强"],
+    profile: {
+      gender: "女",
+      age: "25",
+      occupation: "港区档案员",
+      faction: "港务档案局",
+      appearance: "短发，衣着利落，习惯抱着文件夹。",
+      personality: "冷静、克己、内心敏感。",
+      motivation: "阻止旧案再次吞没无辜者。",
+      goal: "保护档案馆里的关键证据。",
+      fear: "真相被公开后牵连亲人。",
+      strength: "记忆力强、共情高、耐心好。",
+      weakness: "过度压抑自我，不愿求助。",
+      secret: "她知道白塔事件的一部分真相。",
+      arc: "从谨慎旁观转向主动站队。"
+    }
   }
 ];
 

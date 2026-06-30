@@ -9,9 +9,9 @@ function ensureEconomyEntriesArray(data: EconomyEntry[]) {
   return data;
 }
 
-export async function getEconomyEntries(bookId?: number) {
+export async function getEconomyEntries(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<EconomyEntry[]>>("/economy-entries", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureEconomyEntriesArray(response.data.data);

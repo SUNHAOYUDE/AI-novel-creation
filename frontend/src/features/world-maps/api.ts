@@ -9,9 +9,9 @@ function ensureWorldMapsArray(data: WorldMap[]) {
   return data;
 }
 
-export async function getWorldMaps(bookId?: number) {
+export async function getWorldMaps(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<WorldMap[]>>("/world-maps", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureWorldMapsArray(response.data.data);

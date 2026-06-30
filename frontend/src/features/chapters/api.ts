@@ -9,9 +9,9 @@ function ensureChaptersArray(data: Chapter[]) {
   return data;
 }
 
-export async function getChapters(bookId?: number) {
+export async function getChapters(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<Chapter[]>>("/chapters", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureChaptersArray(response.data.data);

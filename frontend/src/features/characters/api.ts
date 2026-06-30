@@ -9,9 +9,9 @@ function ensureCharactersArray(data: Character[]) {
   return data;
 }
 
-export async function getCharacters(bookId?: number) {
+export async function getCharacters(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<Character[]>>("/characters", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureCharactersArray(response.data.data);

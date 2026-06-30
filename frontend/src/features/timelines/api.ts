@@ -9,9 +9,9 @@ function ensureTimelineEventsArray(data: TimelineEvent[]) {
   return data;
 }
 
-export async function getTimelineEvents(bookId?: number) {
+export async function getTimelineEvents(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<TimelineEvent[]>>("/timeline-events", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureTimelineEventsArray(response.data.data);

@@ -9,10 +9,10 @@ function ensureAuditLogsArray(data: AuditLog[]) {
   return data;
 }
 
-export async function getAuditLogs(options: { bookId?: number; entityType?: string; limit?: number } = {}) {
+export async function getAuditLogs(options: { bookId?: number | null; entityType?: string; limit?: number } = {}) {
   const response = await apiClient.get<ApiResponse<AuditLog[]>>("/audit-logs", {
     params: {
-      bookId: options.bookId,
+      bookId: options.bookId ?? undefined,
       entityType: options.entityType,
       limit: options.limit
     }

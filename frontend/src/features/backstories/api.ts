@@ -9,9 +9,9 @@ function ensureBackstoriesArray(data: Backstory[]) {
   return data;
 }
 
-export async function getBackstories(bookId?: number) {
+export async function getBackstories(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<Backstory[]>>("/backstories", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureBackstoriesArray(response.data.data);

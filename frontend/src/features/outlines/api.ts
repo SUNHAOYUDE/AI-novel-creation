@@ -9,9 +9,9 @@ function ensureOutlinesArray(data: Outline[]) {
   return data;
 }
 
-export async function getOutlines(bookId?: number) {
+export async function getOutlines(bookId?: number | null) {
   const response = await apiClient.get<ApiResponse<Outline[]>>("/outlines", {
-    params: bookId ? { bookId } : undefined
+    params: bookId !== null && bookId !== undefined ? { bookId } : undefined
   });
 
   return ensureOutlinesArray(response.data.data);
