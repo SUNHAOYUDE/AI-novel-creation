@@ -103,9 +103,11 @@ export class WorldMapsRepository {
             width,
             height,
             sort_order,
-            markers_json
+            markers_json,
+            created_at,
+            updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
         `,
         payload.bookId,
         payload.parentId ?? null,

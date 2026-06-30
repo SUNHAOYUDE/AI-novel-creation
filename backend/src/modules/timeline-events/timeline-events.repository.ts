@@ -95,9 +95,11 @@ export class TimelineEventsRepository {
             time_label,
             title,
             description,
-            sort_order
+            sort_order,
+            created_at,
+            updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
         `,
         payload.bookId,
         payload.relatedMapId ?? null,
