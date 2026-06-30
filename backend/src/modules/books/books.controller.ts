@@ -8,6 +8,11 @@ import { BooksService } from "./books.service.js";
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 
+  @Get("workbench")
+  async workbench() {
+    return ok(await this.booksService.getWorkbench());
+  }
+
   @Get()
   async findAll() {
     return ok(await this.booksService.findAll());

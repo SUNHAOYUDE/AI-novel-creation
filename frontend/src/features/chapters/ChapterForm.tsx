@@ -1,21 +1,14 @@
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
 import type { Book, Chapter, ChapterPayload } from "@/shared/types";
-
-const defaultState: ChapterPayload = {
-  bookId: 0,
-  chapterNo: 1,
-  title: "",
-  content: "",
-  status: "draft"
-};
 
 type ChapterFormProps = {
   books: Book[];
   editingChapter: Chapter | null;
-  nextChapterNo: number;
   isSubmitting: boolean;
   lockedBookId?: number | null;
+  value: ChapterPayload;
+  autosaveStatus?: "idle" | "dirty" | "saving" | "saved" | "error";
+  onChange: (next: ChapterPayload) => void;
   onSubmit: (payload: ChapterPayload) => Promise<void>;
   onCancelEdit: () => void;
 };
@@ -23,61 +16,35 @@ type ChapterFormProps = {
 export function ChapterForm({
   books,
   editingChapter,
-  nextChapterNo,
   isSubmitting,
   lockedBookId,
+  value,
+  autosaveStatus,
+  onChange,
   onSubmit,
   onCancelEdit
 }: ChapterFormProps) {
-  const initialState = useMemo<ChapterPayload>(() => ({
-    ...defaultState,
-    bookId: lockedBookId ?? books[0]?.id ?? 0,
-    chapterNo: nextChapterNo
-  }), [books, nextChapterNo, lockedBookId]);
-
-  const [formState, setFormState] = useState<ChapterPayload>(initialState);
-
-  useEffect(() => {
-    if (!editingChapter) {
-      setFormState(initialState);
-      return;
-    }
-
-    setFormState({
-      bookId: editingChapter.bookId,
-      chapterNo: editingChapter.chapterNo,
-      title: editingChapter.title,
-      content: editingChapter.content,
-      status: editingChapter.status
-    });
-  }, [editingChapter, initialState]);
-
-  useEffect(() => {
-    if (!lockedBookId) {
-      return;
-    }
-
-    setFormState((current) => ({
-      ...current,
-      bookId: lockedBookId
-    }));
-  }, [lockedBookId]);
+  const valueState = value;
 
   function updateField<Key extends keyof ChapterPayload>(key: Key, value: ChapterPayload[Key]) {
-    setFormState((current) => ({
-      ...current,
+    onChange({
+      ...valueState,
       [key]: value
-    }));
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(formState);
-
-    if (!editingChapter) {
-      setFormState(initialState);
-    }
+    await onSubmit(valueState);
   }
+
+  const autosaveLabelMap: Record<NonNullable<ChapterFormProps["autosaveStatus"]>, string> = {
+    idle: "",
+    dirty: "未保存",
+    saving: "保存中...",
+    saved: "已保存",
+    error: "保存失败"
+  };
 
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
@@ -86,7 +53,7 @@ export function ChapterForm({
           <label className="grid gap-2 text-sm text-mist/70">
             所属作品
             <select
-              value={formState.bookId}
+              value={valueState.bookId}
               onChange={(event) => updateField("bookId", Number(event.target.value))}
               className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none transition focus:border-accent/40"
               disabled={books.length === 0}
@@ -106,7 +73,7 @@ export function ChapterForm({
           <input
             type="number"
             min={1}
-            value={formState.chapterNo}
+            value={valueState.chapterNo}
             onChange={(event) => updateField("chapterNo", Number(event.target.value))}
             className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none transition focus:border-accent/40"
             required
@@ -118,7 +85,7 @@ export function ChapterForm({
         <label className="grid gap-2 text-sm text-mist/70">
           章节标题
           <input
-            value={formState.title}
+            value={valueState.title}
             onChange={(event) => updateField("title", event.target.value)}
             className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none transition focus:border-accent/40"
             placeholder="输入章节标题"
@@ -128,7 +95,7 @@ export function ChapterForm({
         <label className="grid gap-2 text-sm text-mist/70">
           状态
           <select
-            value={formState.status}
+            value={valueState.status}
             onChange={(event) => updateField("status", event.target.value)}
             className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none transition focus:border-accent/40"
           >
@@ -143,14 +110,14 @@ export function ChapterForm({
       <label className="grid gap-2 text-sm text-mist/70">
         正文内容
         <textarea
-          value={formState.content}
+          value={valueState.content}
           onChange={(event) => updateField("content", event.target.value)}
           className="min-h-[220px] rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none transition focus:border-accent/40"
           placeholder="输入章节正文或章节草稿"
         />
       </label>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
           disabled={isSubmitting || (!lockedBookId && books.length === 0)}
@@ -158,6 +125,12 @@ export function ChapterForm({
         >
           {isSubmitting ? "提交中..." : editingChapter ? "保存章节" : "创建章节"}
         </button>
+
+        {autosaveStatus && autosaveStatus !== "idle" ? (
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-mist/65">
+            {autosaveLabelMap[autosaveStatus]}
+          </span>
+        ) : null}
 
         {editingChapter ? (
           <button

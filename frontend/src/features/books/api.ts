@@ -1,5 +1,5 @@
 import { apiClient } from "@/shared/api/client";
-import type { ApiResponse, Book, BookPayload } from "@/shared/types";
+import type { ApiResponse, Book, BookPayload, WorkbenchBook } from "@/shared/types";
 
 export async function getBooks() {
   const response = await apiClient.get<ApiResponse<Book[]>>("/books");
@@ -10,6 +10,17 @@ export async function getBooks() {
   }
 
   return books;
+}
+
+export async function getWorkbenchBooks() {
+  const response = await apiClient.get<ApiResponse<WorkbenchBook[]>>("/books/workbench");
+  const data = response.data.data;
+
+  if (!Array.isArray(data)) {
+    throw new Error("工作台接口返回格式不正确");
+  }
+
+  return data;
 }
 
 export async function getBook(id: number | null) {

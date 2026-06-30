@@ -35,6 +35,23 @@ export type BookPayload = {
   description: string;
 };
 
+export type BookWorkspaceCounts = {
+  backstories: number;
+  maps: number;
+  timeline: number;
+  economy: number;
+  outlines: number;
+  characters: number;
+  foreshadows: number;
+  chapters: number;
+};
+
+export type WorkbenchBook = {
+  book: Book;
+  counts: BookWorkspaceCounts;
+  latestChapter: Chapter | null;
+};
+
 export type ApiResponse<T> = {
   code: number;
   message: string;
@@ -173,6 +190,22 @@ export type ChapterPayload = {
   title: string;
   content: string;
   status: string;
+};
+
+export type ChapterAiMode = "continue" | "polish" | "rewrite";
+
+export type GenerateChapterAiPayload = {
+  bookId: number;
+  chapterId?: number;
+  chapterNo?: number;
+  title?: string;
+  mode: ChapterAiMode;
+  instruction?: string;
+  content: string;
+};
+
+export type GenerateChapterAiResult = {
+  text: string;
 };
 
 export type Backstory = {

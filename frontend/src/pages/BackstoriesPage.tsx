@@ -389,7 +389,7 @@ export function BackstoriesPage() {
         </div>
       </SectionCard>
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid items-start gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <SectionCard title="设定书页" description={summaryText}>
           {errorMessage ? (
             <div className="mb-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -511,7 +511,7 @@ export function BackstoriesPage() {
           )}
         </SectionCard>
 
-        <div className="grid gap-6 self-start xl:sticky xl:top-6">
+        <div className="grid gap-6">
           <SectionCard title="AI 设定生成台" description="输入提示词后，AI 会同时生成背景故事与规则，并直接落到当前作品下。">
             <div className="grid gap-4">
               <div className="grid gap-3 md:grid-cols-3">

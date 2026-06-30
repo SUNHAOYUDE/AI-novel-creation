@@ -33,7 +33,7 @@ export function AppLayout() {
           <div className="mb-8 space-y-2">
             <p className="text-xs uppercase tracking-[0.35em] text-accent/80">工作台</p>
             <h1 className="text-2xl font-semibold text-white">AI 小说生成系统</h1>
-            <p className="text-sm text-mist/65">先搭壳子，再逐步接入角色、大纲、伏笔、章节和反馈能力。</p>
+            <p className="text-sm text-mist/65">沉浸式设定书：从世界观到章节，一路把作品写完。</p>
           </div>
 
           <nav className="space-y-3">
@@ -63,7 +63,7 @@ export function AppLayout() {
           <div className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-accent/70">桌面优先</p>
-              <h2 className="mt-2 text-xl font-medium text-white">前后端分离初版壳子</h2>
+              <h2 className="mt-2 text-xl font-medium text-white">沉浸式创作工作台</h2>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-3">
               {isBookWorkspace ? (

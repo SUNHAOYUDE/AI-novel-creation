@@ -16,9 +16,9 @@ export const globalNavItems: NavItem[] = [
   {
     path: "/",
     label: "工作台",
-    description: "项目概览与开发入口",
+    description: "作品入口与创作总览",
     icon: LayoutDashboard,
-    status: "in_progress"
+    status: "implemented"
   },
   {
     path: "/books",

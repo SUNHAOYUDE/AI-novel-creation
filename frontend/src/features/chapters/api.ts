@@ -1,5 +1,5 @@
 import { apiClient } from "@/shared/api/client";
-import type { ApiResponse, Chapter, ChapterPayload } from "@/shared/types";
+import type { ApiResponse, Chapter, ChapterPayload, GenerateChapterAiPayload, GenerateChapterAiResult } from "@/shared/types";
 
 function ensureChaptersArray(data: Chapter[]) {
   if (!Array.isArray(data)) {
@@ -29,5 +29,12 @@ export async function updateChapter(id: number, payload: ChapterPayload) {
 
 export async function deleteChapter(id: number) {
   const response = await apiClient.delete<ApiResponse<{ success: true }>>(`/chapters/${id}`);
+  return response.data.data;
+}
+
+export async function generateChapterAi(payload: GenerateChapterAiPayload) {
+  const response = await apiClient.post<ApiResponse<GenerateChapterAiResult>>("/chapters/ai", payload, {
+    timeout: 30000
+  });
   return response.data.data;
 }

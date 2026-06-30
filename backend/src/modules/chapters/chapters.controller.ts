@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from "@nestjs/common";
 import { ok } from "../../common/api-response.js";
 import type { CreateChapterDto } from "./dto/create-chapter.dto.js";
+import type { GenerateChapterAiDto } from "./dto/generate-chapter-ai.dto.js";
 import type { UpdateChapterDto } from "./dto/update-chapter.dto.js";
 import { ChaptersService } from "./chapters.service.js";
 
@@ -21,6 +22,11 @@ export class ChaptersController {
   @Post()
   async create(@Body() payload: CreateChapterDto) {
     return ok(await this.chaptersService.create(payload), "chapter created");
+  }
+
+  @Post("ai")
+  async generateAi(@Body() payload: GenerateChapterAiDto) {
+    return ok(await this.chaptersService.generateAi(payload));
   }
 
   @Patch(":id")

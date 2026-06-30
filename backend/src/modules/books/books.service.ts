@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../../common/prisma.service.js";
 import { AuditLogsRepository } from "../audit-logs/audit-logs.repository.js";
 import type { CreateBookDto } from "./dto/create-book.dto.js";
 import type { BookDto } from "./dto/book.dto.js";
@@ -9,6 +10,7 @@ import { BooksRepository } from "./books.repository.js";
 export class BooksService {
   constructor(
     private readonly booksRepository: BooksRepository,
+    private readonly prismaService: PrismaService,
     private readonly auditLogsRepository: AuditLogsRepository
   ) {}
 
@@ -55,6 +57,71 @@ export class BooksService {
       await this.writeAudit(String(existing.id), "delete", `删除作品：${existing.name}`, existing);
     }
     return { success: true };
+  }
+
+  async getWorkbench() {
+    const books = await this.booksRepository.findAll();
+
+    const results = await Promise.all(
+      books.map(async (book) => {
+        const bookId = BigInt(book.id);
+        const [
+          backstories,
+          maps,
+          timeline,
+          economy,
+          outlines,
+          characters,
+          foreshadows,
+          chapters,
+          latestChapter
+        ] = await Promise.all([
+          this.prismaService.backstory.count({ where: { bookId } }),
+          this.prismaService.worldMap.count({ where: { bookId } }),
+          this.prismaService.timelineEvent.count({ where: { bookId } }),
+          this.prismaService.economyEntry.count({ where: { bookId } }),
+          this.prismaService.outline.count({ where: { bookId } }),
+          this.prismaService.character.count({ where: { bookId } }),
+          this.prismaService.foreshadow.count({ where: { bookId } }),
+          this.prismaService.chapter.count({ where: { bookId } }),
+          this.prismaService.chapter.findFirst({
+            where: { bookId },
+            orderBy: { updatedAt: "desc" },
+            include: { book: true }
+          })
+        ]);
+
+        return {
+          book,
+          counts: {
+            backstories,
+            maps,
+            timeline,
+            economy,
+            outlines,
+            characters,
+            foreshadows,
+            chapters
+          },
+          latestChapter: latestChapter
+            ? {
+              id: Number(latestChapter.id),
+              bookId: Number(latestChapter.bookId),
+              bookName: latestChapter.book.name,
+              chapterNo: latestChapter.chapterNo,
+              title: latestChapter.title,
+              content: latestChapter.content ?? "",
+              status: latestChapter.status,
+              wordCount: latestChapter.wordCount,
+              createdAt: latestChapter.createdAt.toISOString(),
+              updatedAt: latestChapter.updatedAt.toISOString()
+            }
+            : null
+        };
+      })
+    );
+
+    return results;
   }
 
   private async writeAudit(entityId: string, action: string, summary: string, payload: unknown) {
